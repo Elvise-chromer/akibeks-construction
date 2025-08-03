@@ -6,6 +6,7 @@ import ErrorBoundary from './components/ErrorBoundary'
 import './index.css'
 
 
+
 // Error boundary for the entire app
 class ErrorBoundary extends React.Component<
   { children: React.ReactNode },
@@ -65,6 +66,7 @@ class ErrorBoundary extends React.Component<
     return this.props.children
   }
 }
+
 
 
 // Security: Disable right-click in production
