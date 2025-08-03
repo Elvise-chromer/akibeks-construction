@@ -6,18 +6,9 @@ import passport from 'passport';
 import { db } from '../../db/connection';
 import { sql } from 'drizzle-orm';
 import { PasswordSecurity, AccountSecurity, TwoFactorAuth } from '../../utils/passwordSecurity';
-import { authenticateToken, requireRole } from '../../middleware/auth';
+import { authenticateToken, requireRole, AuthRequest } from '../../middleware/auth';
 import { otpService } from '../../services/otpService';
 
-interface AuthenticatedRequest extends Request {
-  user: {
-    id: number;
-    email: string;
-    role: string;
-    firstName?: string;
-    lastName?: string;
-  }
-}
 import { emailService } from '../../services/emailService';
 
 const router = express.Router();
@@ -629,9 +620,9 @@ router.get('/google/callback',
 );
 
 // 2FA Setup
-router.post('/setup-2fa', authenticateToken, async (req: AuthenticatedRequest, res: express.Response) => {
+router.post('/setup-2fa', authenticateToken, async (req: AuthRequest, res: express.Response) => {
   try {
-    const userId = req.user.id;
+    const userId = req.user!.id;
 
     // Check if 2FA is already enabled
     const userResult = await db.execute(sql`
@@ -688,10 +679,10 @@ router.post('/setup-2fa', authenticateToken, async (req: AuthenticatedRequest, r
 });
 
 // Verify and Enable 2FA
-router.post('/verify-2fa-setup', authenticateToken, async (req: AuthenticatedRequest, res: express.Response) => {
-  try {
-    const { totpCode } = req.body;
-    const userId = req.user.id;
+router.post('/verify-2fa-setup', authenticateToken, async (req: AuthRequest, res: express.Response) => {
+      try {
+      const { totpCode } = req.body;
+      const userId = req.user!.id;
 
     if (!totpCode || totpCode.length !== 6) {
       return res.status(400).json({
@@ -732,7 +723,7 @@ router.post('/verify-2fa-setup', authenticateToken, async (req: AuthenticatedReq
       WHERE id = ${userId}
     `);
 
-    await logActivity(userId, '2FA_ENABLED', 'Two-factor authentication enabled', req.ip, req.get('User-Agent'));
+    await logActivity(userId.toString(), '2FA_ENABLED', 'Two-factor authentication enabled', req.ip, req.get('User-Agent'));
 
     res.json({
       success: true,
@@ -752,10 +743,10 @@ router.post('/verify-2fa-setup', authenticateToken, async (req: AuthenticatedReq
 });
 
 // Disable 2FA
-router.post('/disable-2fa', authenticateToken, async (req: AuthenticatedRequest, res: express.Response) => {
-  try {
-    const { password, totpCode } = req.body;
-    const userId = req.user.id;
+router.post('/disable-2fa', authenticateToken, async (req: AuthRequest, res: express.Response) => {
+      try {
+      const { password, totpCode } = req.body;
+      const userId = req.user!.id;
 
     if (!password) {
       return res.status(400).json({
@@ -807,7 +798,7 @@ router.post('/disable-2fa', authenticateToken, async (req: AuthenticatedRequest,
       WHERE id = ${userId}
     `);
 
-    await logActivity(userId, '2FA_DISABLED', 'Two-factor authentication disabled', req.ip, req.get('User-Agent'));
+    await logActivity(userId.toString(), '2FA_DISABLED', 'Two-factor authentication disabled', req.ip, req.get('User-Agent'));
 
     res.json({
       success: true,

@@ -1,6 +1,6 @@
 import fs from 'fs';
 import path from 'path';
-const { v4: uuidv4 } = require('uuid');
+import { v4 as uuidv4 } from 'uuid';
 
 import { Request, Response, NextFunction, Router } from 'express';
 import { db } from '../db/connection';

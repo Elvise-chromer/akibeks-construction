@@ -246,8 +246,7 @@ router.post('/', blogLimit, authenticateToken, requireRole('admin'), createBlogV
         seoDescription: seoDescription || excerpt,
         authorId: req.user!.id,
         views: 0,
-      })
-      .returning();
+      });
 
     await logActivity({
       userId: req.user!.id,
@@ -332,10 +331,16 @@ router.put('/:id', blogLimit, authenticateToken, requireRole('admin'), updateBlo
     const updatedPost = await db
       .update(blogPosts)
       .set(updateData)
-      .where(eq(blogPosts.id, Number(id)))
-      .returning();
+      .where(eq(blogPosts.id, Number(id)));
 
-    if (!updatedPost.length) {
+    // Get the updated post since MySQL doesn't support returning
+    const result = await db
+      .select()
+      .from(blogPosts)
+      .where(eq(blogPosts.id, Number(id)))
+      .limit(1);
+
+    if (!result.length) {
       return res.status(404).json({
         success: false,
         message: 'Blog post not found',
@@ -346,7 +351,7 @@ router.put('/:id', blogLimit, authenticateToken, requireRole('admin'), updateBlo
       userId: req.user!.id,
       action: 'UPDATE',
       resource: 'blog_posts',
-      details: `Updated blog post: ${updatedPost[0].title}`,
+      details: `Updated blog post: ${result[0].title}`,
       ipAddress: req.ip,
       userAgent: req.get('User-Agent'),
     });
@@ -354,7 +359,7 @@ router.put('/:id', blogLimit, authenticateToken, requireRole('admin'), updateBlo
     res.json({
       success: true,
       message: 'Blog post updated successfully',
-      data: updatedPost[0],
+      data: result[0],
     });
   } catch (error) {
     console.error('Error updating blog post:', error);

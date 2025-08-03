@@ -245,8 +245,7 @@ router.post('/', teamLimit, authenticateToken, requireRole('admin'), createMembe
         linkedin,
         isActive,
         userId: userId || null,
-      })
-      .returning();
+      });
 
     await logActivity({
       userId: req.user!.id,
@@ -327,10 +326,16 @@ router.put('/:id', teamLimit, authenticateToken, requireRole('admin'), updateMem
     const updatedMember = await db
       .update(teamMembers)
       .set(updateData)
-      .where(eq(teamMembers.id, Number(id)))
-      .returning();
+      .where(eq(teamMembers.id, Number(id)));
 
-    if (!updatedMember.length) {
+    // Get the updated member since MySQL doesn't support returning
+    const result = await db
+      .select()
+      .from(teamMembers)
+      .where(eq(teamMembers.id, Number(id)))
+      .limit(1);
+
+    if (!result.length) {
       return res.status(404).json({
         success: false,
         message: 'Team member not found',
@@ -341,7 +346,7 @@ router.put('/:id', teamLimit, authenticateToken, requireRole('admin'), updateMem
       userId: req.user!.id,
       action: 'UPDATE',
       resource: 'team_members',
-      details: `Updated team member: ${updatedMember[0].firstName} ${updatedMember[0].lastName}`,
+      details: `Updated team member: ${result[0].firstName} ${result[0].lastName}`,
       ipAddress: req.ip,
       userAgent: req.get('User-Agent'),
     });
@@ -349,7 +354,7 @@ router.put('/:id', teamLimit, authenticateToken, requireRole('admin'), updateMem
     res.json({
       success: true,
       message: 'Team member updated successfully',
-      data: updatedMember[0],
+      data: result[0],
     });
   } catch (error) {
     console.error('Error updating team member:', error);
