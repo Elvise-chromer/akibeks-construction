@@ -31,11 +31,12 @@ export interface AuthState {
 }
 
 interface AuthContextType extends AuthState {
-  login: (email: string, password: string) => Promise<boolean>;
+  login: (email: string, password: string, rememberMe?: boolean) => Promise<boolean>;
   logout: () => Promise<void>;
   updateUser: (userData: Partial<User>) => void;
   refreshToken: () => Promise<boolean>;
   checkAuth: () => Promise<void>;
+  clearAuth: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -55,7 +56,7 @@ interface AuthProviderProps {
 // Request interceptor to add auth token
 axios.interceptors.request.use(
   (config) => {
-    const token = Cookies.get('accessToken');
+    const token = Cookies.get('accessToken') || localStorage.getItem('accessToken');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -76,27 +77,35 @@ axios.interceptors.response.use(
       originalRequest._retry = true;
       
       try {
-        const refreshToken = Cookies.get('refreshToken');
+        const refreshToken = Cookies.get('refreshToken') || localStorage.getItem('refreshToken');
         if (refreshToken) {
           const response = await axios.post('/api/auth/refresh', {
             refreshToken,
           });
           
           if (response.data.success && response.data.accessToken) {
-            Cookies.set('accessToken', response.data.accessToken, {
+            const token = response.data.accessToken;
+            
+            // Store token in both cookies and localStorage for redundancy
+            Cookies.set('accessToken', token, {
               secure: process.env.NODE_ENV === 'production',
               sameSite: 'strict',
+              expires: 7, // 7 days
             });
+            localStorage.setItem('accessToken', token);
             
             // Retry the original request
-            originalRequest.headers.Authorization = `Bearer ${response.data.accessToken}`;
+            originalRequest.headers.Authorization = `Bearer ${token}`;
             return axios(originalRequest);
           }
         }
       } catch (refreshError) {
-        // Refresh failed, redirect to login
+        // Refresh failed, clear all auth data
         Cookies.remove('accessToken');
         Cookies.remove('refreshToken');
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user');
         window.location.href = '/login';
       }
     }
@@ -120,12 +129,28 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const initializeAuth = async () => {
     try {
-      const accessToken = Cookies.get('accessToken');
-      const refreshToken = Cookies.get('refreshToken');
+      const accessToken = Cookies.get('accessToken') || localStorage.getItem('accessToken');
+      const refreshToken = Cookies.get('refreshToken') || localStorage.getItem('refreshToken');
+      const storedUser = localStorage.getItem('user');
       
       if (accessToken || refreshToken) {
         // Try to get current user info
-        await checkAuth();
+        if (storedUser) {
+          try {
+            const user = JSON.parse(storedUser);
+            setAuthState({
+              user,
+              token: accessToken,
+              isLoading: false,
+              isAuthenticated: true,
+            });
+          } catch (error) {
+            console.error('Error parsing stored user:', error);
+            await checkAuth();
+          }
+        } else {
+          await checkAuth();
+        }
       } else {
         setAuthState(prev => ({
           ...prev,
@@ -148,7 +173,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       const response = await axios.get('/api/auth/me');
       
       if (response.data.success && response.data.user) {
-        const accessToken = Cookies.get('accessToken');
+        const accessToken = Cookies.get('accessToken') || localStorage.getItem('accessToken');
+        
+        // Store user data in localStorage for persistence
+        localStorage.setItem('user', JSON.stringify(response.data.user));
         
         setAuthState({
           user: response.data.user,
@@ -163,8 +191,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       console.error('Check auth error:', error);
       
       // Clear invalid tokens
-      Cookies.remove('accessToken');
-      Cookies.remove('refreshToken');
+      clearAuth();
       
       setAuthState({
         user: null,
@@ -175,14 +202,14 @@ export function AuthProvider({ children }: AuthProviderProps) {
     }
   };
 
-  const login = async (email: string, password: string): Promise<boolean> => {
+  const login = async (email: string, password: string, rememberMe: boolean = false): Promise<boolean> => {
     try {
       setAuthState(prev => ({ ...prev, isLoading: true }));
 
       const response = await axios.post('/api/auth/login', {
         email,
         password,
-        rememberMe: false, // Can be made configurable
+        rememberMe,
       });
 
       if (response.data.success) {
@@ -194,19 +221,24 @@ export function AuthProvider({ children }: AuthProviderProps) {
           // Login successful
           const { user, accessToken, refreshToken } = response.data;
           
-          // Cookies are set by the server, but we can also set them client-side
+          // Store tokens in both cookies and localStorage
+          const tokenOptions = {
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: 'strict' as const,
+            expires: rememberMe ? 30 : 7, // 30 days if remember me, 7 days otherwise
+          };
+          
           if (accessToken) {
-            Cookies.set('accessToken', accessToken, {
-              secure: process.env.NODE_ENV === 'production',
-              sameSite: 'strict',
-            });
+            Cookies.set('accessToken', accessToken, tokenOptions);
+            localStorage.setItem('accessToken', accessToken);
           }
           if (refreshToken) {
-            Cookies.set('refreshToken', refreshToken, {
-              secure: process.env.NODE_ENV === 'production',
-              sameSite: 'strict',
-            });
+            Cookies.set('refreshToken', refreshToken, tokenOptions);
+            localStorage.setItem('refreshToken', refreshToken);
           }
+          
+          // Store user data
+          localStorage.setItem('user', JSON.stringify(user));
 
           setAuthState({
             user,
@@ -243,7 +275,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
 
   const logout = async (): Promise<void> => {
     try {
-      const refreshToken = Cookies.get('refreshToken');
+      const refreshToken = Cookies.get('refreshToken') || localStorage.getItem('refreshToken');
       
       // Call logout endpoint
       await axios.post('/api/auth/logout', {
@@ -253,23 +285,30 @@ export function AuthProvider({ children }: AuthProviderProps) {
       console.error('Logout error:', error);
     } finally {
       // Clear tokens and state regardless of API call success
-      Cookies.remove('accessToken');
-      Cookies.remove('refreshToken');
-      
-      setAuthState({
-        user: null,
-        token: null,
-        isLoading: false,
-        isAuthenticated: false,
-      });
+      clearAuth();
       
       toast.success('Logged out successfully');
     }
   };
 
+  const clearAuth = () => {
+    Cookies.remove('accessToken');
+    Cookies.remove('refreshToken');
+    localStorage.removeItem('accessToken');
+    localStorage.removeItem('refreshToken');
+    localStorage.removeItem('user');
+    
+    setAuthState({
+      user: null,
+      token: null,
+      isLoading: false,
+      isAuthenticated: false,
+    });
+  };
+
   const refreshToken = async (): Promise<boolean> => {
     try {
-      const refreshTokenValue = Cookies.get('refreshToken');
+      const refreshTokenValue = Cookies.get('refreshToken') || localStorage.getItem('refreshToken');
       
       if (!refreshTokenValue) {
         return false;
@@ -280,14 +319,18 @@ export function AuthProvider({ children }: AuthProviderProps) {
       });
 
       if (response.data.success && response.data.accessToken) {
-        Cookies.set('accessToken', response.data.accessToken, {
+        const token = response.data.accessToken;
+        
+        Cookies.set('accessToken', token, {
           secure: process.env.NODE_ENV === 'production',
           sameSite: 'strict',
+          expires: 7,
         });
+        localStorage.setItem('accessToken', token);
         
         setAuthState(prev => ({
           ...prev,
-          token: response.data.accessToken,
+          token,
         }));
         
         return true;
@@ -308,6 +351,9 @@ export function AuthProvider({ children }: AuthProviderProps) {
     if (authState.user) {
       const updatedUser = { ...authState.user, ...userData };
       
+      // Update localStorage
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      
       setAuthState(prev => ({
         ...prev,
         user: updatedUser,
@@ -322,6 +368,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     updateUser,
     refreshToken,
     checkAuth,
+    clearAuth,
   };
 
   return (

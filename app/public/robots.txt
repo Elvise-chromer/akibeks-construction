@@ -12,6 +12,10 @@ Disallow: /admin/
 Disallow: /api/
 Disallow: /_next/
 Disallow: /static/
+Disallow: /client/
+Disallow: /analytics/
+Disallow: /login
+Disallow: /register
 
 # Allow important pages
 Allow: /
@@ -25,5 +29,14 @@ Allow: /gallery
 Allow: /testimonials
 Allow: /quote-request
 Allow: /maintenance
-Allow: /terms-of-service
-Allow: /privacy-policy
+Allow: /terms
+Allow: /privacy
+Allow: /cookies
+Allow: /faq
+Allow: /team
+Allow: /safety
+Allow: /case-studies
+Allow: /emergency
+Allow: /portfolio
+Allow: /downloads
+Allow: /csr
