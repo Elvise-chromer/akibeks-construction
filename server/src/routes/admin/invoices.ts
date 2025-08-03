@@ -1,6 +1,6 @@
 import express, { Request, Response, NextFunction } from 'express';
 import { eq, desc, sql, and } from 'drizzle-orm';
-import { requireAuth } from '../../middleware/auth';
+import { authenticateAdmin } from '../../middleware/adminAuth';
 import { db } from '../../db/connection';
 import { invoices, users, projects, activityLogs } from '../../db/schema';
 import type { InferModel } from 'drizzle-orm';
@@ -10,10 +10,10 @@ const router = express.Router();
 type Invoice = InferModel<typeof invoices>;
 type User = InferModel<typeof users>;
 
-import { AuthRequest } from '../../middleware/auth';
+import { AdminAuthRequest } from '../../middleware/adminAuth';
 
 // Get all invoices with pagination, search, and filtering
-router.get('/', requireAuth, async (req: AuthRequest, res: Response, next: NextFunction) => {
+router.get('/', authenticateAdmin, async (req: AdminAuthRequest, res: Response, next: NextFunction) => {
   try {
     const { 
       page = '1', 

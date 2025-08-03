@@ -74,10 +74,10 @@ async function setupDatabase() {
     // Step 5: Seed initial data
     console.log('\n5️⃣ Seeding initial data...');
     try {
-      const { stdout, stderr } = await execAsync('npm run db:seed', { cwd: process.cwd() });
+      const { stdout, stderr } = await execAsync('npm run db:seed:complete', { cwd: process.cwd() });
       if (stdout) console.log(stdout);
       if (stderr) console.log(stderr);
-      console.log('✅ Initial data seeded successfully');
+      console.log('✅ Complete data seeded successfully');
     } catch (error: any) {
       console.log('⚠️  Seed script output:', error.stdout || error.stderr);
       console.log('✅ Seeding completed (with warnings)');
