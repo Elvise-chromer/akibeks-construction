@@ -1,0 +1,77 @@
+{
+  "name": "akibeks-construction",
+  "version": "2.0.0",
+  "description": "Akibeks Construction - Simplified Modern Architecture",
+  "type": "module",
+  "workspaces": [
+    "app",
+    "server"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\" \"npm run dev:app\"",
+    "dev:app": "npm run dev --workspace=app",
+    "dev:server": "npm run dev --workspace=server",
+    "build": "npm run build --workspace=app && npm run build --workspace=server",
+    "build:app": "npm run build --workspace=app",
+    "build:server": "npm run build --workspace=server",
+    "start": "npm run start --workspace=server",
+    "install:all": "npm install && npm install --workspace=app && npm install --workspace=server",
+    "clean": "rm -rf node_modules app/node_modules server/node_modules app/build server/dist",
+    "type-check": "npm run type-check --workspace=app && npm run type-check --workspace=server",
+    "lint": "npm run lint --workspace=app && npm run lint --workspace=server",
+    "security-audit": "npm audit && npm audit --workspace=app && npm audit --workspace=server",
+    "status": "echo '🔍 Server Status Check...' && curl -s http://localhost:3000 >/dev/null && echo '✅ App: Running on :3000' || echo '❌ App: Not running' && curl -s http://localhost:5000/api/health >/dev/null && echo '✅ Server: Running on :5000' || echo '❌ Server: Not running'",
+    "test:security": "echo '🔒 Testing security headers...' && curl -I http://localhost:5000/api/health 2>/dev/null | grep -E 'X-Frame|X-Content|X-XSS' || echo '❌ Security headers test failed'",
+    "setup": "npm run install:all && echo '✅ Setup complete! Run npm run dev to start development.'",
+    "restructure:cleanup": "echo '🧹 Cleaning up old structure...' && rm -rf frontend backend && echo '✅ Old directories removed'",
+    "db:setup": "node scripts/setup-database.js",
+    "db:seed": "node scripts/seed-data.js",
+    "db:test": "node scripts/test-crud-operations.js",
+    "db:reset": "node scripts/setup-database.js && node scripts/seed-data.js",
+    "check:pages": "node -e \"const checker = require('./app/src/lib/utils/pageCompletionChecker.ts'); console.log(JSON.stringify(checker.generateCompletionReport(), null, 2))\"",
+    "analyze:security": "echo '🔐 Running security analysis...' && npm run security-audit && echo '✅ Security analysis complete'",
+    "optimize:icons": "echo '🎨 Optimizing icon usage...' && grep -r 'react-icons' app/src --include='*.tsx' | wc -l && echo ' icon imports found'",
+    "deploy:prepare": "npm run clean && npm run install:all && npm run type-check && npm run build && npm run security-audit",
+    "env:validate": "node -e \"require('dotenv').config(); const required=['DATABASE_URL','JWT_SECRET']; const missing=required.filter(v=>!process.env[v]); if(missing.length) { console.error('Missing env vars:', missing.join(', ')); process.exit(1); } console.log('✅ Environment validation passed');\""
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  },
+  "keywords": [
+    "construction",
+    "website",
+    "vite",
+    "react",
+    "nodejs",
+    "express",
+    "typescript",
+    "simplified",
+    "modern",
+    "security",
+    "database",
+    "postgresql"
+  ],
+  "author": "Akibeks Construction Ltd",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/akibeks/construction-website.git"
+  },
+  "bugs": {
+    "url": "https://github.com/akibeks/construction-website/issues"
+  },
+  "homepage": "https://akibeks.co.ke",
+  "postinstall": "echo \"✅ Akibeks Construction - Enhanced Security Ready! Run 'npm run env:validate' to check configuration, then 'npm run dev' to start.\"",
+  "pre-commit": [
+    "npm run type-check",
+    "npm run lint"
+  ],
+  "dependencies": {
+    "@sentry/react": "^9.43.0",
+    "@sentry/tracing": "^7.120.4"
+  }
+}

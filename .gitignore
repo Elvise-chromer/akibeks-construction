@@ -1,0 +1,269 @@
+# Dependencies
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Environment Variables - CRITICAL: Never commit these!
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.production
+.env.staging
+*.env
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Database Backups - Contains sensitive data
+backups/
+*.sql
+*.dump
+*.backup
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+*.lcov
+
+# nyc test coverage
+.nyc_output/
+
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Optional npm cache directory
+.npm
+
+# Optional eslint cache
+.eslintcache
+
+# Optional REPL history
+.node_repl_history
+
+# Output of 'npm pack'
+*.tgz
+
+# Yarn Integrity file
+.yarn-integrity
+
+# dotenv environment variables file (backup protection)
+.env*
+!.env.example
+
+# parcel-bundler cache (https://parceljs.org/)
+.cache
+.parcel-cache
+
+# next.js build output
+.next
+
+# nuxt.js build output
+.nuxt
+
+# vuepress build output
+.vuepress/dist
+
+# Serverless directories
+.serverless/
+
+# FuseBox cache
+.fusebox/
+
+# DynamoDB Local files
+.dynamodb/
+
+# TernJS port file
+.tern-port
+
+# Build directories
+build/
+dist/
+out/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Security and sensitive files
+*.key
+*.pem
+*.p12
+*.pfx
+*.crt
+*.cer
+*.der
+private/
+secrets/
+credentials/
+
+# Application specific
+uploads/
+media/
+storage/
+
+# Test files
+test-results/
+coverage/
+.nyc_output/
+
+# Documentation build
+docs/build/
+
+# Storybook build outputs
+storybook-static/
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Local development
+local/
+.local/
+
+# Python (if any Python scripts are added)
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Migration temporary files
+migration-temp/
+*.migration.tmp
+
+# SSL certificates
+*.crt
+*.key
+*.pem
+ssl/
+
+# Docker (if Docker is added later)
+.dockerignore
+docker-compose.override.yml
+
+# Performance monitoring
+.trace
+.profile
+
+# Package manager lock files (choose one strategy)
+# package-lock.json  # Uncomment if using yarn exclusively
+# yarn.lock         # Uncomment if using npm exclusively
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Webpack cache
+.webpack/
+
+# ESLint cache
+.eslintcache
+
+# Prettier cache
+.prettiercache
+
+# Firebase (if Firebase is integrated)
+.firebase/
+
+# Vercel (if Vercel is used for deployment)
+.vercel/
+
+# Local Netlify folder (if Netlify is used)
+.netlify/
+
+# SvelteKit (if SvelteKit is added)
+.svelte-kit/
+
+# End-to-end tests
+test-results/
+playwright-report/
+playwright/.cache/
+
+# Chromatic (if Chromatic is used for visual testing)
+build-storybook.log
+
+# Akibeks Construction Specific
+# Remove these comments and add project-specific ignores as needed
+
+# Generated documentation
+api-docs/
+docs/generated/
+
+# Test databases
+test.db
+test.sqlite
+
+# Development certificates
+localhost.pem
+localhost-key.pem
+
+# Application logs
+app.log
+error.log
+access.log
+security.log
+audit.log
+
+# Application cache
+cache/
+.cache/
+
+# Compiled assets
+assets/compiled/
+public/assets/compiled/
+
+# User uploaded content
+public/uploads/
+app/public/uploads/
+
+# Email templates compiled
+templates/compiled/
+
+# Reports
+reports/
+exports/
+
+# Temporary backups
+*.bak
+*.backup
+*.orig

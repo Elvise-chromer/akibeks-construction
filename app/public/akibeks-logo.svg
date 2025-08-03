@@ -1,0 +1,86 @@
+<svg width="200" height="200" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <!-- Outer circle borders -->
+  <circle cx="100" cy="100" r="95" fill="none" stroke="#000" stroke-width="4"/>
+  <circle cx="100" cy="100" r="89" fill="none" stroke="#f97316" stroke-width="3"/>
+  
+  <!-- Background circle -->
+  <circle cx="100" cy="100" r="83" fill="white"/>
+  
+  <!-- Houses -->
+  <g transform="translate(100, 55)">
+    <!-- Left house -->
+    <g transform="translate(-45, 5)">
+      <!-- Roof -->
+      <polygon points="-18,25 0,-2 18,25" fill="#000"/>
+      <!-- House body -->
+      <polygon points="-16,23 -3,3 3,3 16,23" fill="white" stroke="#000" stroke-width="1"/>
+      <!-- Window -->
+      <rect x="-12" y="10" width="8" height="8" fill="#000"/>
+      <rect x="-10" y="12" width="2" height="2" fill="white"/>
+      <rect x="-7" y="12" width="2" height="2" fill="white"/>
+      <rect x="-10" y="15" width="2" height="2" fill="white"/>
+      <rect x="-7" y="15" width="2" height="2" fill="white"/>
+    </g>
+    
+    <!-- Center house (largest) -->
+    <g transform="translate(0, -5)">
+      <!-- Main roof -->
+      <polygon points="-25,35 0,-8 25,35" fill="#000"/>
+      <!-- Inner roof line -->
+      <polygon points="-22,32 -4,2 4,2 22,32" fill="white" stroke="#000" stroke-width="1"/>
+      <polygon points="-18,28 0,8 18,28" fill="white" stroke="#000" stroke-width="1"/>
+      <!-- Window -->
+      <rect x="-10" y="15" width="12" height="12" fill="#000"/>
+      <rect x="-8" y="17" width="2" height="2" fill="white"/>
+      <rect x="-4" y="17" width="2" height="2" fill="white"/>
+      <rect x="0" y="17" width="2" height="2" fill="white"/>
+      <rect x="4" y="17" width="2" height="2" fill="white"/>
+      <rect x="-8" y="21" width="2" height="2" fill="white"/>
+      <rect x="-4" y="21" width="2" height="2" fill="white"/>
+      <rect x="0" y="21" width="2" height="2" fill="white"/>
+      <rect x="4" y="21" width="2" height="2" fill="white"/>
+      <rect x="-8" y="24" width="2" height="2" fill="white"/>
+      <rect x="-4" y="24" width="2" height="2" fill="white"/>
+      <rect x="0" y="24" width="2" height="2" fill="white"/>
+      <rect x="4" y="24" width="2" height="2" fill="white"/>
+    </g>
+    
+    <!-- Right house -->
+    <g transform="translate(45, 5)">
+      <!-- Roof -->
+      <polygon points="-18,25 0,-2 18,25" fill="#000"/>
+      <!-- House body -->
+      <polygon points="-16,23 -3,3 3,3 16,23" fill="white" stroke="#000" stroke-width="1"/>
+      <!-- Window -->
+      <rect x="4" y="10" width="8" height="8" fill="#000"/>
+      <rect x="5" y="12" width="2" height="2" fill="white"/>
+      <rect x="8" y="12" width="2" height="2" fill="white"/>
+      <rect x="5" y="15" width="2" height="2" fill="white"/>
+      <rect x="8" y="15" width="2" height="2" fill="white"/>
+    </g>
+  </g>
+  
+  <!-- Company name -->
+  <text x="100" y="120" text-anchor="middle" font-family="serif" font-size="22" font-weight="bold" fill="#000">
+    AKIBEKS
+  </text>
+  
+  <text x="100" y="135" text-anchor="middle" font-family="serif" font-size="11" font-weight="normal" fill="#000">
+    ENGINEERING SOLUTIONS
+  </text>
+  
+  <!-- Decorative lines -->
+  <line x1="20" y1="145" x2="75" y2="145" stroke="#000" stroke-width="2"/>
+  <line x1="125" y1="145" x2="180" y2="145" stroke="#000" stroke-width="2"/>
+  
+  <!-- Decorative flourish -->
+  <g transform="translate(100, 162)">
+    <path d="M-25,0 Q-15,-6 -5,-3 Q0,0 5,-3 Q15,-6 25,0" fill="none" stroke="#000" stroke-width="2"/>
+    <path d="M-20,3 Q-10,8 0,3 Q10,8 20,3" fill="none" stroke="#000" stroke-width="1.5"/>
+    <circle cx="-15" cy="0" r="2.5" fill="#000"/>
+    <circle cx="15" cy="0" r="2.5" fill="#000"/>
+    <circle cx="-8" cy="3" r="1.5" fill="#000"/>
+    <circle cx="8" cy="3" r="1.5" fill="#000"/>
+    <circle cx="0" cy="0" r="2" fill="#000"/>
+  </g>
+</svg>
