@@ -10,14 +10,7 @@ const router = express.Router();
 type Invoice = InferModel<typeof invoices>;
 type User = InferModel<typeof users>;
 
-interface AuthRequest extends Request {
-  user?: {
-    id: number;
-    email: string;
-    role: string;
-    permissions: string[];
-  };
-}
+import { AuthRequest } from '../../middleware/auth';
 
 // Get all invoices with pagination, search, and filtering
 router.get('/', requireAuth, async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -43,7 +36,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response, next: NextF
       dueDate: invoices.dueDate,
       clientName: invoices.clientName,
       clientEmail: invoices.clientEmail,
-      projectName: projects.name,
+      projectName: projects.title,
       total: invoices.total,
       amountPaid: invoices.amountPaid,
       balance: invoices.balance,
@@ -54,7 +47,7 @@ router.get('/', requireAuth, async (req: AuthRequest, res: Response, next: NextF
       `
     })
     .from(invoices)
-    .leftJoin(users, eq(invoices.clientId, users.id))
+    .leftJoin(users, eq(invoices.createdBy, users.id))
     .leftJoin(projects, eq(invoices.projectId, projects.id));
 
     let conditions = [];
@@ -123,8 +116,36 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res: Response, next: Ne
     // Get invoice details with Drizzle ORM
     const invoiceResult = await db
       .select({
-        ...invoices,
-        projectName: projects.name,
+        id: invoices.id,
+        uuid: invoices.uuid,
+        invoiceNumber: invoices.invoiceNumber,
+        quotationId: invoices.quotationId,
+        projectId: invoices.projectId,
+        clientName: invoices.clientName,
+        clientEmail: invoices.clientEmail,
+        clientPhone: invoices.clientPhone,
+        clientAddress: invoices.clientAddress,
+        items: invoices.items,
+        subtotal: invoices.subtotal,
+        taxRate: invoices.taxRate,
+        taxAmount: invoices.taxAmount,
+        discount: invoices.discount,
+        total: invoices.total,
+        amountPaid: invoices.amountPaid,
+        balance: invoices.balance,
+        currency: invoices.currency,
+        dueDate: invoices.dueDate,
+        status: invoices.status,
+        paymentMethod: invoices.paymentMethod,
+        paymentReference: invoices.paymentReference,
+        terms: invoices.terms,
+        notes: invoices.notes,
+        createdBy: invoices.createdBy,
+        sentAt: invoices.sentAt,
+        paidAt: invoices.paidAt,
+        createdAt: invoices.createdAt,
+        updatedAt: invoices.updatedAt,
+        projectName: projects.title,
         isOverdue: sql<boolean>`
           CASE WHEN ${invoices.dueDate} < NOW() 
           AND ${invoices.status} NOT IN ('paid', 'cancelled')
@@ -136,11 +157,11 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res: Response, next: Ne
       .where(eq(invoices.id, Number(id)))
       .limit(1);
     
-    if (invoiceResult.rows.length === 0) {
+    if (invoiceResult.length === 0) {
       return res.status(404).json({ error: 'Invoice not found' });
     }
 
-    const invoice = invoiceResult.rows[0];
+    const invoice = invoiceResult[0];
 
     // Get invoice sections
     const sectionsQuery = `
@@ -152,7 +173,7 @@ router.get('/:id', requireAuth, async (req: AuthRequest, res: Response, next: Ne
 
     // Get invoice items for each section
     const sections = await Promise.all(
-      sectionsResult.rows.map(async (section) => {
+      sectionsResult.map(async (section) => {
         const itemsQuery = `
           SELECT * FROM invoice_items 
           WHERE section_id = ? 

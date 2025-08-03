@@ -523,7 +523,7 @@ const EnhancedAdminDashboard: React.FC = () => {
               </div>
             </div>
             <div className="flex items-center space-x-3">
-              <Icon name="shield" size="lg" color="success" />
+              <Icon name="security" size="lg" color="success" />
               <div>
                 <p className="font-medium text-gray-900">Security</p>
                 <p className="text-sm text-green-600">Protected</p>

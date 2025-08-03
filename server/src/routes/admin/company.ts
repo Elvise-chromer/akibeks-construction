@@ -1,258 +1,290 @@
 import express from 'express';
-import { requireAuth } from '../../middleware/auth';
+import { Request, Response, NextFunction } from 'express';
+import { db } from '../../db/connection';
+import { settings } from '../../db/schema';
+import { eq, desc } from 'drizzle-orm';
+import { AuthRequest, requireRole } from '../../middleware/auth';
 
 const router = express.Router();
 
-// Get company settings
-router.get('/settings', requireAuth, async (req, res) => {
+// Helper function for activity logging
+const logActivity = async (params: { userId: number; action: string; resource: string; details: string; ipAddress?: string; userAgent?: string }) => {
   try {
-    const result = await (req as any).db.query(
-      'SELECT * FROM company_settings ORDER BY created_at DESC LIMIT 1'
-    );
+    const { activityLogs } = await import('../../db/schema');
+    await db.insert(activityLogs).values({
+      uuid: crypto.randomUUID(),
+      userId: params.userId.toString(),
+      action: params.action,
+      details: params.details,
+      ipAddress: params.ipAddress,
+      userAgent: params.userAgent,
+      resource: params.resource,
+      resourceId: '',
+      success: true
+    });
+  } catch (error) {
+    console.error('Failed to log activity:', error);
+  }
+};
 
-    if (result.rows.length === 0) {
-      // Create default settings if none exist
-      const defaultSettings = {
-        name: 'AKIBEKS CONSTRUCTION LIMITED',
-        address: 'P.O. Box 12345-00100\nNairobi, Kenya',
-        phone: '+254-700-000000',
-        email: 'info@akibeks.com',
-        website: 'www.akibeks.com',
-        timezone: 'Africa/Nairobi',
-        currency: 'KES',
-        default_tax_rate: 16.00,
-        default_labour_rate: 36.00
-      };
+// Get company settings
+router.get('/settings', requireRole(['admin']), async (req: AuthRequest, res: Response) => {
+  try {
+    // Get all company settings
+    const companySettings = await db
+      .select()
+      .from(settings)
+      .where(eq(settings.category, 'company'))
+      .orderBy(desc(settings.createdAt));
 
-      const insertResult = await (req as any).db.query(`
-        INSERT INTO company_settings (
-          name, address, phone, email, website, timezone, 
-          currency, default_tax_rate, default_labour_rate
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE 
-        name = VALUES(name), address = VALUES(address), phone = VALUES(phone), 
-        email = VALUES(email), website = VALUES(website), timezone = VALUES(timezone), 
-        currency = VALUES(currency), default_tax_rate = VALUES(default_tax_rate), 
-        default_labour_rate = VALUES(default_labour_rate)
-      `, [
-        defaultSettings.name, defaultSettings.address, defaultSettings.phone,
-        defaultSettings.email, defaultSettings.website, defaultSettings.timezone,
-        defaultSettings.currency, defaultSettings.default_tax_rate, 
-        defaultSettings.default_labour_rate
-      ]);
+    // Convert to key-value object
+    const settingsObject: Record<string, any> = {};
+    companySettings.forEach(setting => {
+      settingsObject[setting.key] = setting.value;
+    });
 
-      return res.json(insertResult.rows[0]);
+    // If no settings exist, create defaults
+    if (companySettings.length === 0) {
+      const defaultSettings = [
+        { key: 'company_name', value: 'AKIBEKS CONSTRUCTION LIMITED', description: 'Company name' },
+        { key: 'company_address', value: 'P.O. Box 12345-00100\nNairobi, Kenya', description: 'Company address' },
+        { key: 'company_phone', value: '+254-700-000000', description: 'Company phone number' },
+        { key: 'company_email', value: 'info@akibeks.com', description: 'Company email' },
+        { key: 'company_website', value: 'www.akibeks.com', description: 'Company website' },
+        { key: 'company_timezone', value: 'Africa/Nairobi', description: 'Company timezone' },
+        { key: 'company_currency', value: 'KES', description: 'Default currency' },
+        { key: 'default_tax_rate', value: 16.00, description: 'Default tax rate (%)' },
+        { key: 'default_labour_rate', value: 36.00, description: 'Default labour rate (%)' }
+      ];
+
+      for (const setting of defaultSettings) {
+        await db.insert(settings).values({
+          key: setting.key,
+          value: JSON.stringify(setting.value),
+          description: setting.description,
+          category: 'company',
+          isPublic: false,
+          updatedBy: req.user!.id
+        });
+        settingsObject[setting.key] = setting.value;
+      }
     }
 
-    res.json(result.rows[0]);
+    res.json({
+      success: true,
+      data: settingsObject
+    });
   } catch (error) {
     console.error('Error fetching company settings:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching company settings'
+    });
   }
 });
 
 // Update company settings
-router.put('/settings', requireAuth, async (req, res) => {
+router.put('/settings', requireRole(['admin']), async (req: AuthRequest, res: Response) => {
   try {
     const {
-      name,
-      address,
-      phone,
-      email,
-      website,
-      logo_url,
-      letterhead_url,
-      footer_text,
-      tax_number,
-      registration_number,
-      bank_details,
-      social_links,
-      business_hours,
-      timezone,
-      currency,
+      company_name,
+      company_address,
+      company_phone,
+      company_email,
+      company_website,
+      company_timezone,
+      company_currency,
       default_tax_rate,
-      default_labour_rate
+      default_labour_rate,
+      ...otherSettings
     } = req.body;
 
-    // Check if settings exist
-    const existingResult = await (req as any).db.query(
-      'SELECT id FROM company_settings ORDER BY created_at DESC LIMIT 1'
-    );
+    const settingsToUpdate = {
+      company_name,
+      company_address,
+      company_phone,
+      company_email,
+      company_website,
+      company_timezone,
+      company_currency,
+      default_tax_rate,
+      default_labour_rate,
+      ...otherSettings
+    };
 
-    let result;
-    if (existingResult.rows.length === 0) {
-      // Create new settings
-      result = await (req as any).db.query(`
-        INSERT INTO company_settings (
-          name, address, phone, email, website, logo_url, letterhead_url,
-          footer_text, tax_number, registration_number, bank_details,
-          social_links, business_hours, timezone, currency, 
-          default_tax_rate, default_labour_rate, updated_by
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE 
-        name = VALUES(name), address = VALUES(address), phone = VALUES(phone), 
-        email = VALUES(email), website = VALUES(website), logo_url = VALUES(logo_url), 
-        letterhead_url = VALUES(letterhead_url), footer_text = VALUES(footer_text), 
-        tax_number = VALUES(tax_number), registration_number = VALUES(registration_number), 
-        bank_details = VALUES(bank_details), social_links = VALUES(social_links), 
-        business_hours = VALUES(business_hours), timezone = VALUES(timezone), 
-        currency = VALUES(currency), default_tax_rate = VALUES(default_tax_rate), 
-        default_labour_rate = VALUES(default_labour_rate), updated_at = NOW(), updated_by = ?
-      `, [
-        name, address, phone, email, website, logo_url, letterhead_url,
-        footer_text, tax_number, registration_number, JSON.stringify(bank_details || {}),
-        JSON.stringify(social_links || {}), JSON.stringify(business_hours || {}),
-        timezone, currency, default_tax_rate, default_labour_rate, (req.user as any).id
-      ]);
-    } else {
-      // Update existing settings
-      result = await (req as any).db.query(`
-        UPDATE company_settings 
-        SET name = ?, address = ?, phone = ?, email = ?, website = ?,
-            logo_url = ?, letterhead_url = ?, footer_text = ?, 
-            tax_number = ?, registration_number = ?, bank_details = ?,
-            social_links = ?, business_hours = ?, timezone = ?,
-            currency = ?, default_tax_rate = ?, default_labour_rate = ?,
-            updated_at = NOW(), updated_by = ?
-        WHERE id = ?
-        RETURNING *
-      `, [
-        name, address, phone, email, website, logo_url, letterhead_url,
-        footer_text, tax_number, registration_number, JSON.stringify(bank_details || {}),
-        JSON.stringify(social_links || {}), JSON.stringify(business_hours || {}),
-        timezone, currency, default_tax_rate, default_labour_rate, (req.user as any).id,
-        existingResult.rows[0].id
-      ]);
+    // Update each setting
+    for (const [key, value] of Object.entries(settingsToUpdate)) {
+      if (value !== undefined) {
+        // Check if setting exists
+        const existingSetting = await db
+          .select()
+          .from(settings)
+          .where(eq(settings.key, key))
+          .limit(1);
+
+        if (existingSetting.length > 0) {
+          // Update existing setting
+          await db
+            .update(settings)
+            .set({
+              value: JSON.stringify(value),
+              updatedBy: req.user!.id,
+              updatedAt: new Date()
+            })
+            .where(eq(settings.key, key));
+        } else {
+          // Create new setting
+          await db.insert(settings).values({
+            key,
+            value: JSON.stringify(value),
+            description: `Company setting: ${key}`,
+            category: 'company',
+            isPublic: false,
+            updatedBy: req.user!.id
+          });
+        }
+      }
     }
 
-    // Log the change
-    await (req as any).db.query(`
-      INSERT INTO audit_logs (
-        user_id, action, resource_type, resource_id, 
-        new_values, created_at
-      ) VALUES (?, 'update', 'company_settings', ?, ?, NOW())
-    `, [
-      (req.user as any).id,
-      result.rows[0].id,
-      JSON.stringify({ 
-        name, 
-        phone, 
-        email, 
-        default_tax_rate, 
-        default_labour_rate 
-      })
-    ]);
+    await logActivity({
+      userId: req.user!.id,
+      action: 'UPDATE',
+      resource: 'company_settings',
+      details: 'Updated company settings',
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent')
+    });
 
-    res.json(result.rows[0]);
+    res.json({
+      success: true,
+      message: 'Company settings updated successfully'
+    });
   } catch (error) {
     console.error('Error updating company settings:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    res.status(500).json({
+      success: false,
+      message: 'Error updating company settings'
+    });
   }
 });
 
-// Upload company logo
-router.post('/logo', requireAuth, async (req, res) => {
+// Get company logo and branding
+router.get('/branding', requireRole(['admin']), async (req: AuthRequest, res: Response) => {
   try {
-    // This would typically handle file upload
-    // For now, we'll just update the logo_url field
-    const { logo_url } = req.body;
+    const brandingSettings = await db
+      .select()
+      .from(settings)
+      .where(eq(settings.category, 'branding'));
 
-    const result = await (req as any).db.query(`
-      UPDATE company_settings 
-      SET logo_url = ?, updated_at = NOW(), updated_by = ?
-      WHERE id = (SELECT id FROM company_settings ORDER BY created_at DESC LIMIT 1)
-      RETURNING *
-    `, [logo_url, (req.user as any).id]);
+    const brandingObject: Record<string, any> = {};
+    brandingSettings.forEach(setting => {
+      try {
+        brandingObject[setting.key] = JSON.parse(setting.value as string);
+      } catch {
+        brandingObject[setting.key] = setting.value;
+      }
+    });
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Company settings not found' });
+    res.json({
+      success: true,
+      data: brandingObject
+    });
+  } catch (error) {
+    console.error('Error fetching branding settings:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching branding settings'
+    });
+  }
+});
+
+// Update company branding
+router.put('/branding', requireRole(['admin']), async (req: AuthRequest, res: Response) => {
+  try {
+    const brandingData = req.body;
+
+    for (const [key, value] of Object.entries(brandingData)) {
+      if (value !== undefined) {
+        const existingSetting = await db
+          .select()
+          .from(settings)
+          .where(eq(settings.key, key))
+          .limit(1);
+
+        if (existingSetting.length > 0) {
+          await db
+            .update(settings)
+            .set({
+              value: JSON.stringify(value),
+              updatedBy: req.user!.id,
+              updatedAt: new Date()
+            })
+            .where(eq(settings.key, key));
+        } else {
+          await db.insert(settings).values({
+            key,
+            value: JSON.stringify(value),
+            description: `Branding setting: ${key}`,
+            category: 'branding',
+            isPublic: false,
+            updatedBy: req.user!.id
+          });
+        }
+      }
     }
 
-    res.json({ success: true, logo_url: result.rows[0].logo_url });
+    await logActivity({
+      userId: req.user!.id,
+      action: 'UPDATE',
+      resource: 'company_branding',
+      details: 'Updated company branding',
+      ipAddress: req.ip,
+      userAgent: req.get('User-Agent')
+    });
+
+    res.json({
+      success: true,
+      message: 'Branding updated successfully'
+    });
   } catch (error) {
-    console.error('Error uploading logo:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Error updating branding:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error updating branding'
+    });
   }
 });
 
-// Upload letterhead template
-router.post('/letterhead', requireAuth, async (req, res) => {
+// Get all settings by category
+router.get('/settings/:category', requireRole(['admin']), async (req: AuthRequest, res: Response) => {
   try {
-    const { letterhead_url } = req.body;
+    const { category } = req.params;
 
-    const result = await (req as any).db.query(`
-      UPDATE company_settings 
-      SET letterhead_url = ?, updated_at = NOW(), updated_by = ?
-      WHERE id = (SELECT id FROM company_settings ORDER BY created_at DESC LIMIT 1)
-      RETURNING *
-    `, [letterhead_url, (req.user as any).id]);
+    const categorySettings = await db
+      .select()
+      .from(settings)
+      .where(eq(settings.category, category))
+      .orderBy(desc(settings.createdAt));
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Company settings not found' });
-    }
+    const settingsObject: Record<string, any> = {};
+    categorySettings.forEach(setting => {
+      try {
+        settingsObject[setting.key] = JSON.parse(setting.value as string);
+      } catch {
+        settingsObject[setting.key] = setting.value;
+      }
+    });
 
-    res.json({ success: true, letterhead_url: result.rows[0].letterhead_url });
+    res.json({
+      success: true,
+      data: settingsObject
+    });
   } catch (error) {
-    console.error('Error uploading letterhead:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Get public company info (for frontend logo and basic info)
-router.get('/public', async (req, res) => {
-  try {
-    const result = await (req as any).db.query(`
-      SELECT 
-        name, phone, email, website, logo_url, 
-        timezone, currency, address, social_links
-      FROM company_settings 
-      ORDER BY created_at DESC 
-      LIMIT 1
-    `);
-
-    if (result.rows.length === 0) {
-      // Return default settings if none exist
-      return res.json({
-        name: 'AKIBEKS CONSTRUCTION LIMITED',
-        phone: '+254-700-000000',
-        email: 'info@akibeks.co.ke',
-        website: 'https://akibeks.co.ke',
-        logo_url: '/assets/logo.png',
-        timezone: 'Africa/Nairobi',
-        currency: 'KES',
-        address: 'P.O. Box 12345-00100\nNairobi, Kenya',
-        social_links: {}
-      });
-    }
-
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('Error fetching public company info:', error);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-});
-
-// Get company metrics
-router.get('/metrics', requireAuth, async (req, res) => {
-  try {
-    const metricsQuery = `
-      WITH company_stats AS (
-        SELECT 
-          (SELECT COUNT(*) FROM projects WHERE status = 'active') as active_projects,
-          (SELECT COUNT(*) FROM users WHERE role != 'client') as total_employees,
-          (SELECT COUNT(*) FROM users WHERE role = 'client') as total_clients,
-          (SELECT COUNT(*) FROM leads WHERE status NOT IN ('won', 'lost')) as active_leads,
-          (SELECT COALESCE(SUM(total_amount), 0) FROM invoices WHERE status = 'paid' AND paid_date >= DATE_FORMAT(CURRENT_DATE, '%Y-01-01')) as annual_revenue,
-          (SELECT COALESCE(SUM(total_amount), 0) FROM invoices WHERE status = 'paid' AND paid_date >= DATE_FORMAT(CURRENT_DATE, '%Y-%m-01')) as monthly_revenue,
-          (SELECT COUNT(*) FROM projects WHERE status = 'completed' AND updated_at >= DATE_FORMAT(CURRENT_DATE, '%Y-01-01')) as completed_projects_this_year,
-          (SELECT COUNT(*) FROM invoices WHERE status IN ('sent', 'overdue') AND due_date < CURRENT_DATE) as overdue_invoices
-      )
-      SELECT * FROM company_stats
-    `;
-
-    const result = await (req as any).db.query(metricsQuery);
-    res.json(result.rows[0]);
-  } catch (error) {
-    console.error('Error fetching company metrics:', error);
-    res.status(500).json({ error: 'Internal server error' });
+    console.error('Error fetching settings:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error fetching settings'
+    });
   }
 });
 

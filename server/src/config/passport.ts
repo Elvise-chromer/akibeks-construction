@@ -29,6 +29,7 @@ declare global {
       role: string;
       firstName: string;
       lastName: string;
+      permissions: string[];
     }
   }
 }
@@ -94,7 +95,8 @@ passport.use(new LocalStrategy(
         email: user.email,
         role: user.role,
         firstName: user.firstName,
-        lastName: user.lastName
+        lastName: user.lastName,
+        permissions: []
       });
     } catch (error) {
       console.error('Login error:', error);
@@ -121,7 +123,14 @@ passport.deserializeUser(async (id: number, done) => {
     .where(eq(users.id, id));
     
     const user = result[0];
-    done(null, user || null);
+    if (user) {
+      done(null, {
+        ...user,
+        permissions: []
+      });
+    } else {
+      done(null, null);
+    }
   } catch (error) {
     console.error('Deserialization error:', error);
     done(error instanceof Error ? error : new Error('An unknown error occurred'));

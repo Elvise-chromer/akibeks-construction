@@ -10,17 +10,12 @@ dotenv.config();
 const DB_HOST = process.env.DB_HOST || 'localhost';
 const DB_PORT = process.env.DB_PORT || '3306';
 const DB_USER = process.env.DB_USER || 'root';
-const DB_PASSWORD = process.env.DB_PASSWORD;
+const DB_PASSWORD = process.env.DB_PASSWORD || '';
 const DB_NAME = process.env.DB_NAME || 'akibeks';
-
-// Validate required environment variables
-if (!DB_PASSWORD) {
-  throw new Error('Database password is required. Set DB_PASSWORD environment variable.');
-}
 
 // Create the connection URL
 const DATABASE_URL = process.env.DATABASE_URL || 
-  `mysql://${DB_USER}:${DB_PASSWORD}@${DB_HOST}:${DB_PORT}/${DB_NAME}`;
+  `mysql://${DB_USER}${DB_PASSWORD ? ':' + DB_PASSWORD : ''}@${DB_HOST}:${DB_PORT}/${DB_NAME}`;
 
 // Create the connection pool
 const pool = mysql.createPool({

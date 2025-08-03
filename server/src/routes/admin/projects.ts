@@ -228,8 +228,7 @@ router.post('/', projectsLimit, authenticateToken, requireRole('admin'), createP
         category: category || 'residential',
         featuredImage,
         createdBy: req.user!.id,
-      })
-      .returning();
+      });
 
     await logActivity({
       userId: req.user!.id,
@@ -292,10 +291,16 @@ router.put('/:id', projectsLimit, authenticateToken, requireRole('admin'), updat
     const updatedProject = await db
       .update(projects)
       .set(updateData)
-      .where(eq(projects.id, Number(id)))
-      .returning();
+      .where(eq(projects.id, Number(id)));
 
-    if (!updatedProject.length) {
+    // Get the updated project since MySQL doesn't support returning
+    const result = await db
+      .select()
+      .from(projects)
+      .where(eq(projects.id, Number(id)))
+      .limit(1);
+
+    if (!result.length) {
       return res.status(404).json({
         success: false,
         message: 'Project not found',
@@ -306,7 +311,7 @@ router.put('/:id', projectsLimit, authenticateToken, requireRole('admin'), updat
       userId: req.user!.id,
       action: 'UPDATE',
       resource: 'projects',
-      details: `Updated project: ${updatedProject[0].title}`,
+      details: `Updated project: ${result[0].title}`,
       ipAddress: req.ip,
       userAgent: req.get('User-Agent'),
     });
@@ -314,7 +319,7 @@ router.put('/:id', projectsLimit, authenticateToken, requireRole('admin'), updat
     res.json({
       success: true,
       message: 'Project updated successfully',
-      data: updatedProject[0],
+      data: result[0],
     });
   } catch (error) {
     console.error('Error updating project:', error);

@@ -194,8 +194,7 @@ router.post('/', servicesLimit, authenticateToken, requireRole('admin'), createS
         startingPrice: startingPrice.toString(),
         features: features ? JSON.stringify(features) : null,
         isActive,
-      })
-      .returning();
+      });
 
     await logActivity({
       userId: req.user!.id,
@@ -257,10 +256,16 @@ router.put('/:id', servicesLimit, authenticateToken, requireRole('admin'), updat
     const updatedService = await db
       .update(services)
       .set(updateData)
-      .where(eq(services.id, Number(id)))
-      .returning();
+      .where(eq(services.id, Number(id)));
 
-    if (!updatedService.length) {
+    // Get the updated service since MySQL doesn't support returning
+    const result = await db
+      .select()
+      .from(services)
+      .where(eq(services.id, Number(id)))
+      .limit(1);
+
+    if (!result.length) {
       return res.status(404).json({
         success: false,
         message: 'Service not found',
@@ -271,7 +276,7 @@ router.put('/:id', servicesLimit, authenticateToken, requireRole('admin'), updat
       userId: req.user!.id,
       action: 'UPDATE',
       resource: 'services',
-      details: `Updated service: ${updatedService[0].title}`,
+      details: `Updated service: ${result[0].title}`,
       ipAddress: req.ip,
       userAgent: req.get('User-Agent'),
     });
@@ -279,7 +284,7 @@ router.put('/:id', servicesLimit, authenticateToken, requireRole('admin'), updat
     res.json({
       success: true,
       message: 'Service updated successfully',
-      data: updatedService[0],
+      data: result[0],
     });
   } catch (error) {
     console.error('Error updating service:', error);
