@@ -40,6 +40,11 @@ import CommercialServices from './views/services/CommercialServices';
 import IndustrialServices from './views/services/IndustrialServices';
 import RenovationServices from './views/services/RenovationServices';
 import ResidentialServices from './views/services/ResidentialServices';
+import ConstructionServices from './views/services/ConstructionServices';
+import EngineeringServices from './views/services/EngineeringServices';
+import ArchitectureServices from './views/services/ArchitectureServices';
+import ProjectManagementServices from './views/services/ProjectManagementServices';
+import ConsultationServices from './views/services/ConsultationServices';
 
 // Dynamic Detail Pages
 import ProjectDetail from './views/ProjectDetail';
@@ -83,6 +88,11 @@ function App() {
               <Route path="services/industrial" element={<IndustrialServices />} />
               <Route path="services/renovation" element={<RenovationServices />} />
               <Route path="services/residential" element={<ResidentialServices />} />
+              <Route path="services/construction" element={<ConstructionServices />} />
+              <Route path="services/engineering" element={<EngineeringServices />} />
+              <Route path="services/architecture" element={<ArchitectureServices />} />
+              <Route path="services/project-management" element={<ProjectManagementServices />} />
+              <Route path="services/consultation" element={<ConsultationServices />} />
               <Route path="services/:id" element={<ServiceDetail />} />
               <Route path="projects" element={<Projects />} />
               <Route path="projects/:id" element={<ProjectDetail />} />

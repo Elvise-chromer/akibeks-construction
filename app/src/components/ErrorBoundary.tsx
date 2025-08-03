@@ -1,5 +1,5 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
-import { HiExclamationTriangle, HiRefresh, HiHome, HiArrowLeft } from 'react-icons/hi';
+import { HiExclamation, HiRefresh, HiHome, HiArrowLeft } from 'react-icons/hi';
 
 interface Props {
   children: ReactNode;
@@ -68,7 +68,7 @@ class ErrorBoundary extends Component<Props, State> {
           <div className="max-w-md w-full bg-white rounded-lg shadow-lg p-8 text-center">
             <div className="mb-6">
               <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-red-100 mb-4">
-                <HiExclamationTriangle className="h-8 w-8 text-red-600" />
+                <HiExclamation className="h-8 w-8 text-red-600" />
               </div>
               <h1 className="text-2xl font-bold text-gray-900 mb-2">
                 Oops! Something went wrong

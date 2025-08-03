@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import {
@@ -6,10 +6,13 @@ import {
   HiArrowLeft, HiCalculator, HiCog, HiClipboard, HiDownload,
   HiRefresh, HiCheck, HiX, HiExclamation, HiInformationCircle,
   HiCurrencyDollar, HiCalendar, HiUser, HiOfficeBuilding,
-  HiDocumentText, HiTag, HiLightBulb, HiPencil
+  HiDocumentText, HiTag, HiLightBulb, HiPencil, HiClock
 } from 'react-icons/hi';
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
+import { useAutoSave } from '../../../hooks/useAutoSave';
+import { getStatusColor, getFinancialColor } from '../../../lib/colors';
+import toast from 'react-hot-toast';
 
 interface InvoiceItem {
   id: string;
@@ -89,11 +92,46 @@ const InvoiceEditor: React.FC = () => {
   });
   
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showPreview, setShowPreview] = useState(false);
-  const [autoSave, setAutoSave] = useState(true);
-  const [lastSaved, setLastSaved] = useState<string>('');
+  const [showAutoSaveStatus, setShowAutoSaveStatus] = useState(false);
+
+  // Auto-save functionality
+  const handleAutoSave = useCallback(async (data: Invoice): Promise<boolean> => {
+    try {
+      if (!data.invoice_number || !data.client_name || !data.client_email) {
+        return false; // Don't save incomplete invoices
+      }
+
+      const response = await fetch(`/api/invoices${data.id ? `/${data.id}` : ''}`, {
+        method: data.id ? 'PUT' : 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success && result.invoice) {
+          setInvoice(prev => ({ ...prev, id: result.invoice.id }));
+          return true;
+        }
+      }
+      return false;
+    } catch (error) {
+      console.error('Auto-save error:', error);
+      return false;
+    }
+  }, []);
+
+  const autoSave = useAutoSave(invoice, {
+    delay: 3000,
+    enabled: true,
+    onSave: handleAutoSave,
+    saveKey: `invoice_${id || 'new'}`,
+    showNotifications: false
+  });
 
   useEffect(() => {
     if (id && id !== 'new') {
@@ -222,35 +260,31 @@ const InvoiceEditor: React.FC = () => {
   };
 
   const handleSave = async (showNotification = true) => {
-    if (saving) return;
-    
-    setSaving(true);
     try {
       // Validate invoice
       const validationErrors = validateInvoice();
       if (Object.keys(validationErrors).length > 0) {
         setErrors(validationErrors);
-        setSaving(false);
-        return;
+        if (showNotification) {
+          toast.error('Please fix the errors before saving.');
+        }
+        return false;
       }
 
-      // Mock API call - replace with actual API
-      console.log('Saving invoice:', invoice);
+      const success = await autoSave.saveNow();
       
-      if (showNotification) {
-        // Show success notification
-        alert('Invoice saved successfully!');
+      if (success && showNotification) {
+        toast.success('Invoice saved successfully!');
       }
       
-      setLastSaved(new Date().toLocaleTimeString());
       setErrors({});
+      return success;
     } catch (error) {
       console.error('Error saving invoice:', error);
       if (showNotification) {
-        alert('Error saving invoice. Please try again.');
+        toast.error('An error occurred while saving the invoice.');
       }
-    } finally {
-      setSaving(false);
+      return false;
     }
   };
 
@@ -397,17 +431,7 @@ const InvoiceEditor: React.FC = () => {
     }).format(amount);
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'draft': return 'bg-gray-100 text-gray-800';
-      case 'sent': return 'bg-blue-100 text-blue-800';
-      case 'viewed': return 'bg-yellow-100 text-yellow-800';
-      case 'paid': return 'bg-green-100 text-green-800';
-      case 'overdue': return 'bg-red-100 text-red-800';
-      case 'cancelled': return 'bg-gray-100 text-gray-600';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
+  // Status color is now handled by the imported getStatusColor function
 
   const exportInvoicePDF = () => {
     const doc = new jsPDF();
@@ -494,18 +518,31 @@ const InvoiceEditor: React.FC = () => {
                   {id === 'new' ? 'New Invoice' : `Invoice ${invoice.invoice_number}`}
                 </h1>
                 <div className="flex items-center space-x-4 mt-1">
-                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(invoice.status)}`}>
+                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(invoice.status).bg} ${getStatusColor(invoice.status).text} border ${getStatusColor(invoice.status).border}`}>
                     {invoice.status}
                   </span>
-                  {lastSaved && (
-                    <span className="text-sm text-gray-500">
-                      Last saved: {lastSaved}
+                  {autoSave.lastSaved && (
+                    <span className="text-sm text-gray-500 flex items-center">
+                      <HiClock className="w-4 h-4 mr-1" />
+                      Last saved: {autoSave.lastSaved}
                     </span>
                   )}
-                  {autoSave && (
-                    <span className="text-sm text-green-600 flex items-center">
-                      <HiCheck className="w-4 h-4 mr-1" />
-                      Auto-save enabled
+                  {autoSave.isSaving && (
+                    <span className="text-sm text-blue-600 flex items-center">
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-1"></div>
+                      Saving...
+                    </span>
+                  )}
+                  {autoSave.hasUnsavedChanges && !autoSave.isSaving && (
+                    <span className="text-sm text-orange-600 flex items-center">
+                      <HiExclamation className="w-4 h-4 mr-1" />
+                      Unsaved changes
+                    </span>
+                  )}
+                  {autoSave.error && (
+                    <span className="text-sm text-red-600 flex items-center">
+                      <HiExclamation className="w-4 h-4 mr-1" />
+                      Save error
                     </span>
                   )}
                 </div>
@@ -513,16 +550,6 @@ const InvoiceEditor: React.FC = () => {
             </div>
             
             <div className="flex items-center space-x-3">
-              <label className="flex items-center space-x-2">
-                <input
-                  type="checkbox"
-                  checked={autoSave}
-                  onChange={(e) => setAutoSave(e.target.checked)}
-                  className="rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                />
-                <span className="text-sm text-gray-700">Auto-save</span>
-              </label>
-              
               <button
                 onClick={() => setShowPreview(!showPreview)}
                 className="text-gray-600 hover:text-gray-800 p-2"
@@ -539,10 +566,10 @@ const InvoiceEditor: React.FC = () => {
               
               <button
                 onClick={() => handleSave(true)}
-                disabled={saving}
+                disabled={autoSave.isSaving}
                 className="bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors duration-200 flex items-center space-x-2 disabled:opacity-50"
               >
-                {saving ? (
+                {autoSave.isSaving ? (
                   <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
                 ) : (
                   <HiSave className="w-4 h-4" />

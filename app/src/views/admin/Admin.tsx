@@ -29,6 +29,7 @@ import ProjectManagement from './projects/ProjectManagement';
 import InvoiceManagement from './invoices/InvoiceManagement';
 import InvoiceEditor from './invoices/InvoiceEditor';
 import QuotationManagement from './quotations/QuotationManagement';
+import QuotationEditor from './quotations/QuotationEditor';
 import SecurityDashboard from './security/SecurityDashboard';
 import AdvancedMetrics from './analytics/AdvancedMetrics';
 import DocumentManagement from './documents/DocumentManagement';
@@ -333,6 +334,8 @@ const Admin: React.FC = () => {
             <Route path="/invoices/new" element={<InvoiceEditor />} />
             <Route path="/invoices/:id/edit" element={<InvoiceEditor />} />
             <Route path="/quotations" element={<QuotationManagement />} />
+            <Route path="/quotations/new" element={<QuotationEditor />} />
+            <Route path="/quotations/:id/edit" element={<QuotationEditor />} />
             
             {/* Project Management */}
             <Route path="/projects/*" element={<ProjectManagement />} />
