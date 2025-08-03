@@ -38,6 +38,7 @@ import {
 import { DndContext, closestCenter, useDraggable, useDroppable } from '@dnd-kit/core';
 import jsPDF from 'jspdf';
 import * as XLSX from 'xlsx';
+import { getCalendarColor, getStatusColor } from '../../../lib/colors';
 
 interface CalendarEvent {
   id: string;
@@ -443,22 +444,8 @@ const EnhancedCalendar: React.FC = () => {
   };
 
   const getEventTypeColor = (type: string) => {
-    const colors: { [key: string]: string } = {
-      meeting: '#3B82F6',
-      deadline: '#EF4444',
-      milestone: '#10B981',
-      task: '#F59E0B',
-      appointment: '#8B5CF6',
-      holiday: '#EC4899',
-      reminder: '#6B7280',
-      personal: '#14B8A6',
-      project: '#3B82F6',
-      client_call: '#8B5CF6',
-      site_visit: '#10B981',
-      training: '#F59E0B',
-      review: '#6366F1'
-    };
-    return colors[type] || '#6B7280';
+    const calendarColor = getCalendarColor(type);
+    return `${calendarColor.bg} ${calendarColor.text} border ${calendarColor.border}`;
   };
 
   const getEventTypeIcon = (type: string) => {

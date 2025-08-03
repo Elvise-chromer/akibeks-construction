@@ -11,6 +11,7 @@ import {
 import jsPDF from 'jspdf';
 import 'jspdf-autotable';
 import { useAutoSave } from '../../../hooks/useAutoSave';
+import { getStatusColor, getCategoryColor } from '../../../lib/colors';
 import toast from 'react-hot-toast';
 
 interface QuotationItem {
@@ -386,18 +387,7 @@ const QuotationEditor: React.FC = () => {
     }).format(amount);
   };
 
-  const getStatusColor = (status: string) => {
-    const colors = {
-      draft: 'bg-gray-100 text-gray-800',
-      sent: 'bg-blue-100 text-blue-800',
-      viewed: 'bg-yellow-100 text-yellow-800',
-      accepted: 'bg-green-100 text-green-800',
-      rejected: 'bg-red-100 text-red-800',
-      expired: 'bg-orange-100 text-orange-800',
-      revised: 'bg-purple-100 text-purple-800'
-    };
-    return colors[status as keyof typeof colors] || colors.draft;
-  };
+  // Status color is now handled by the imported getStatusColor function
 
   const exportQuotationPDF = () => {
     const doc = new jsPDF();
@@ -475,7 +465,7 @@ const QuotationEditor: React.FC = () => {
                   {id === 'new' ? 'New Quotation' : `Quotation ${quotation.quote_number}`}
                 </h1>
                 <div className="flex items-center space-x-4 mt-1">
-                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(quotation.status)}`}>
+                  <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(quotation.status).bg} ${getStatusColor(quotation.status).text} border ${getStatusColor(quotation.status).border}`}>
                     {quotation.status}
                   </span>
                   {autoSave.lastSaved && (

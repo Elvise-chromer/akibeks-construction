@@ -7,6 +7,7 @@ import {
   HiArrowUp, HiArrowDown, HiX, HiUpload, HiTag, HiLocationMarker
 } from 'react-icons/hi';
 import { useAuthContext } from '../../../lib';
+import { getStatusColor, getPriorityColor, getCategoryColor, getProgressColor } from '../../../lib/colors';
 
 interface Project {
   id: string;
@@ -191,26 +192,7 @@ const ProjectManagement: React.FC = () => {
   const startIndex = (currentPage - 1) * itemsPerPage;
   const paginatedProjects = filteredProjects.slice(startIndex, startIndex + itemsPerPage);
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'planning': return 'bg-blue-100 text-blue-800';
-      case 'active': return 'bg-green-100 text-green-800';
-      case 'on_hold': return 'bg-yellow-100 text-yellow-800';
-      case 'completed': return 'bg-purple-100 text-purple-800';
-      case 'cancelled': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getPriorityColor = (priority: string) => {
-    switch (priority) {
-      case 'low': return 'bg-gray-100 text-gray-800';
-      case 'medium': return 'bg-blue-100 text-blue-800';
-      case 'high': return 'bg-orange-100 text-orange-800';
-      case 'urgent': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
+  // Status and priority colors are now handled by the imported functions
 
   const openModal = (type: 'view' | 'edit' | 'create', project?: Project) => {
     setModalType(type);
@@ -423,12 +405,12 @@ const ProjectManagement: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(project.status)}`}>
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(project.status).bg} ${getStatusColor(project.status).text} border ${getStatusColor(project.status).border}`}>
                       {project.status.replace('_', ' ')}
                     </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPriorityColor(project.priority)}`}>
+                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPriorityColor(project.priority).bg} ${getPriorityColor(project.priority).text} border ${getPriorityColor(project.priority).border}`}>
                       {project.priority}
                     </span>
                   </td>
@@ -436,11 +418,11 @@ const ProjectManagement: React.FC = () => {
                     <div className="flex items-center gap-2">
                       <div className="flex-1 bg-gray-200 rounded-full h-2">
                         <div
-                          className="bg-blue-600 h-2 rounded-full transition-all duration-300"
+                          className={`h-2 rounded-full transition-all duration-300 ${getProgressColor(project.progress).bg}`}
                           style={{ width: `${project.progress}%` }}
                         ></div>
                       </div>
-                      <span className="text-sm text-gray-600">{project.progress}%</span>
+                      <span className={`text-sm ${getProgressColor(project.progress).text}`}>{project.progress}%</span>
                     </div>
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-900">
