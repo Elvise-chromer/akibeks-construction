@@ -33,7 +33,7 @@ async function completeSeed() {
     let adminId;
     if (Array.isArray(existingUsers) && existingUsers.length === 0) {
       const adminUuid = uuidv4();
-      const hashedPassword = await bcrypt.hash('Admin123!', 12);
+      const hashedPassword = '$2b$12$L9WHNcx1Rl6SNCPEalc2Q.kKlck4SveW7dQFVDuh2CPj8.tVduw8i'; // Admin123!
       
       const [result] = await connection.execute(
         `INSERT INTO users (
