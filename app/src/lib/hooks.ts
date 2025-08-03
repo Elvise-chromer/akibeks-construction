@@ -237,15 +237,8 @@ export function useProjects() {
       
       const response = await api.get<PaginatedResponse<Project>>('/projects');
       
-      if (response.success) {
-        setProjects(response.data.data);
-        setLoading({ isLoading: false, error: undefined });
-      } else {
-        setLoading({ 
-          isLoading: false, 
-          error: response.error || 'Failed to fetch projects' 
-        });
-      }
+      setProjects(response.data);
+      setLoading({ isLoading: false, error: undefined });
     } catch (error) {
       setLoading({ 
         isLoading: false, 
@@ -258,12 +251,8 @@ export function useProjects() {
     try {
       const response = await api.post<Project>('/projects', projectData);
       
-      if (response.success) {
-        setProjects(prev => [response.data, ...prev]);
-        return { success: true, data: response.data };
-      } else {
-        return { success: false, error: response.error };
-      }
+      setProjects(prev => [response, ...prev]);
+      return { success: true, data: response };
     } catch (error) {
       return { 
         success: false, 
@@ -276,16 +265,12 @@ export function useProjects() {
     try {
       const response = await api.put<Project>(`/projects/${id}`, projectData);
       
-      if (response.success) {
-        setProjects(prev => 
-          prev.map(project => 
-            project.id === id ? { ...project, ...response.data } : project
-          )
-        );
-        return { success: true, data: response.data };
-      } else {
-        return { success: false, error: response.error };
-      }
+      setProjects(prev => 
+        prev.map(project => 
+          project.id === id ? { ...project, ...response } : project
+        )
+      );
+      return { success: true, data: response };
     } catch (error) {
       return { 
         success: false, 
@@ -296,14 +281,10 @@ export function useProjects() {
 
   const deleteProject = useCallback(async (id: string) => {
     try {
-      const response = await api.delete(`/projects/${id}`);
+      await api.delete(`/projects/${id}`);
       
-      if (response.success) {
-        setProjects(prev => prev.filter(project => project.id !== id));
-        return { success: true };
-      } else {
-        return { success: false, error: response.error };
-      }
+      setProjects(prev => prev.filter(project => project.id !== id));
+      return { success: true };
     } catch (error) {
       return { 
         success: false, 

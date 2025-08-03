@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { Router } from 'express';
 import { db } from '../db/connection';
-import { auditLogs } from '../db/schema';
+import { activityLogs } from '../db/schema';
 import { sql } from 'drizzle-orm';
 
 const router = Router();
@@ -32,7 +32,7 @@ export const auditLog = async (req: Request & { user?: any }, res: Response, nex
     };
 
     // Don't block the response
-    db.insert(auditLogs)
+          db.insert(activityLogs)
       .values(logEntry)
       .execute()
       .catch(error => {
@@ -54,13 +54,13 @@ router.get('/', async (req: Request, res: Response) => {
     const offset = (page - 1) * limit;
 
     const logs = await db.select()
-      .from(auditLogs)
+      .from(activityLogs)
       .limit(limit)
       .offset(offset)
-      .orderBy(auditLogs.timestamp);
+      .orderBy(activityLogs.createdAt);
 
     const total = await db.select({ count: sql`COUNT(*) as count` })
-      .from(auditLogs)
+      .from(activityLogs)
       .then(result => Number(result[0].count) || 0);
 
     res.json({

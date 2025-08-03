@@ -2,7 +2,6 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App'
 import './index.css'
-import * as Sentry from '@sentry/react';
 
 // Error boundary for the entire app
 class ErrorBoundary extends React.Component<
@@ -23,7 +22,7 @@ class ErrorBoundary extends React.Component<
     
     // In production, you might want to send this to an error reporting service
     if (import.meta.env.PROD) {
-      Sentry.captureException(error);
+      console.error('Production error:', error);
     }
   }
 
@@ -66,10 +65,6 @@ class ErrorBoundary extends React.Component<
 
 // Security: Disable right-click in production
 if (import.meta.env.PROD) {
-  Sentry.init({
-    dsn: import.meta.env.VITE_SENTRY_DSN || '',
-    tracesSampleRate: 1.0,
-  });
   document.addEventListener('contextmenu', (e) => e.preventDefault())
   
   // Disable F12, Ctrl+Shift+I, Ctrl+Shift+J, Ctrl+U
