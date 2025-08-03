@@ -1,7 +1,10 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
+import { HelmetProvider } from 'react-helmet-async'
 import App from './App'
+import ErrorBoundary from './components/ErrorBoundary'
 import './index.css'
+
 
 // Error boundary for the entire app
 class ErrorBoundary extends React.Component<
@@ -63,6 +66,7 @@ class ErrorBoundary extends React.Component<
   }
 }
 
+
 // Security: Disable right-click in production
 if (import.meta.env.PROD) {
   document.addEventListener('contextmenu', (e) => e.preventDefault())
@@ -90,8 +94,10 @@ const root = ReactDOM.createRoot(rootElement)
 
 root.render(
   <React.StrictMode>
-    <ErrorBoundary>
-      <App />
-    </ErrorBoundary>
+    <HelmetProvider>
+      <ErrorBoundary>
+        <App />
+      </ErrorBoundary>
+    </HelmetProvider>
   </React.StrictMode>
 )

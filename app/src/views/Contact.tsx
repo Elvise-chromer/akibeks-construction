@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
+import * as yup from 'yup';
 import toast from 'react-hot-toast';
 import {
   HiPhone,
@@ -13,59 +15,120 @@ import {
   HiCog
 } from 'react-icons/hi';
 import { FaWhatsapp } from 'react-icons/fa';
+import SEO from '../components/SEO';
 
-interface ContactForm {
-  name: string;
-  email: string;
-  phone: string;
-  company?: string;
-  serviceType: string;
-  projectBudget: string;
-  timeline: string;
-  subject: string;
-  message: string;
-}
+// Validation schema
+const contactSchema = yup.object().shape({
+  name: yup.string().required('Full name is required').min(2, 'Name must be at least 2 characters'),
+  email: yup.string().email('Please enter a valid email address').required('Email is required'),
+  phone: yup.string().required('Phone number is required').matches(/^(\+254|0)[17]\d{8}$/, 'Please enter a valid Kenyan phone number'),
+  company: yup.string().optional(),
+  serviceType: yup.string().required('Please select a service type'),
+  projectBudget: yup.string().optional(),
+  timeline: yup.string().optional(),
+  subject: yup.string().required('Subject is required').min(5, 'Subject must be at least 5 characters'),
+  message: yup.string().required('Message is required').min(10, 'Message must be at least 10 characters')
+});
+
+type ContactForm = yup.InferType<typeof contactSchema>;
 
 const Contact: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { register, handleSubmit, reset, formState: { errors } } = useForm<ContactForm>();
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<ContactForm>({
+    resolver: yupResolver(contactSchema),
+    mode: 'onChange'
+  });
 
   const onSubmit = async (data: ContactForm) => {
     setIsSubmitting(true);
     try {
+      // First try the API endpoint
       const response = await fetch('/api/contact', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(data),
+        body: JSON.stringify({
+          ...data,
+          timestamp: new Date().toISOString(),
+          source: 'website_contact_form'
+        }),
       });
 
-      const result = await response.json();
-
-      if (response.ok && result.success) {
-        toast.success(result.message || 'Thank you! Your inquiry has been sent successfully. We\'ll get back to you within 24 hours.');
-        reset();
-      } else {
-        // Handle validation errors
-        if (result.details && Array.isArray(result.details)) {
-          const errorMessages = result.details.map((error: any) => error.msg).join(', ');
-          toast.error(`Please check your form: ${errorMessages}`);
-        } else if (result.fallback) {
-          toast.error(
-            `${result.error || 'Failed to send message'}. Please contact us directly at ${result.fallback.phone} or ${result.fallback.email}`,
-            { duration: 8000 }
-          );
+      if (response.ok) {
+        const result = await response.json();
+        
+        if (result.success) {
+          toast.success(result.message || 'Thank you! Your inquiry has been sent successfully. We\'ll get back to you within 24 hours.');
+          reset();
+          
+          // Track successful submission
+          if (typeof gtag !== 'undefined') {
+            gtag('event', 'form_submit', {
+              event_category: 'Contact',
+              event_label: 'Contact Form'
+            });
+          }
         } else {
-          toast.error(result.error || 'Sorry, there was an error sending your message. Please try again.');
+          // Handle API validation errors
+          if (result.details && Array.isArray(result.details)) {
+            const errorMessages = result.details.map((error: any) => error.msg).join(', ');
+            toast.error(`Please check your form: ${errorMessages}`);
+          } else {
+            throw new Error(result.error || 'Failed to send message');
+          }
         }
+      } else {
+        // If API fails, try email fallback
+        await handleEmailFallback(data);
       }
     } catch (error) {
       console.error('Contact form error:', error);
-      toast.error('Network error. Please check your connection and try again, or contact us directly at +254-700-000000.');
+      
+      // Try email fallback as last resort
+      try {
+        await handleEmailFallback(data);
+      } catch (fallbackError) {
+        console.error('Fallback error:', fallbackError);
+        toast.error(
+          'Network error. Please contact us directly at +254-700-123-456 or info@akibeks.co.ke',
+          { duration: 10000 }
+        );
+      }
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleEmailFallback = async (data: ContactForm) => {
+    // Create mailto link as fallback
+    const subject = encodeURIComponent(`Contact Form: ${data.subject}`);
+    const body = encodeURIComponent(`
+Name: ${data.name}
+Email: ${data.email}
+Phone: ${data.phone}
+Company: ${data.company || 'N/A'}
+Service Type: ${data.serviceType}
+Project Budget: ${data.projectBudget || 'N/A'}
+Timeline: ${data.timeline || 'N/A'}
+
+Message:
+${data.message}
+
+---
+Sent from Akibeks Construction website contact form
+    `);
+    
+    const mailtoLink = `mailto:info@akibeks.co.ke?subject=${subject}&body=${body}`;
+    
+    // Show fallback message
+    toast.error(
+      'Unable to send message automatically. Please click the button below to send via email.',
+      { duration: 8000 }
+    );
+    
+    // Open email client
+    window.open(mailtoLink, '_blank');
   };
 
   const contactInfo = [
@@ -136,6 +199,41 @@ const Contact: React.FC = () => {
 
   return (
     <div className="min-h-screen">
+      <SEO
+        title="Contact Us - Akibeks Construction Ltd"
+        description="Get in touch with Akibeks Construction Ltd. Contact us for construction projects, quotes, and consultations. Call +254-700-123-456 or email info@akibeks.co.ke"
+        keywords="contact, construction company, Kenya, Nairobi, building services, quote request"
+        canonical="/contact"
+        ogTitle="Contact Akibeks Construction Ltd"
+        ogDescription="Get in touch with Kenya's premier construction company. Contact us for construction projects, quotes, and consultations."
+        structuredData={{
+          "@context": "https://schema.org",
+          "@type": "ContactPage",
+          "name": "Contact Akibeks Construction Ltd",
+          "description": "Contact page for Akibeks Construction Ltd",
+          "url": "https://akibeks.co.ke/contact",
+          "mainEntity": {
+            "@type": "Organization",
+            "name": "Akibeks Construction Ltd",
+            "address": {
+              "@type": "PostalAddress",
+              "streetAddress": "Kiambu Road, Nairobi",
+              "addressLocality": "Nairobi",
+              "addressRegion": "Nairobi",
+              "postalCode": "00100",
+              "addressCountry": "KE"
+            },
+            "contactPoint": {
+              "@type": "ContactPoint",
+              "telephone": "+254-700-123-456",
+              "contactType": "customer service",
+              "areaServed": "KE",
+              "availableLanguage": "English"
+            }
+          }
+        }}
+      />
+      
       {/* Hero Section */}
       <section className="hero-gradient text-white py-20">
         <div className="container-custom">
